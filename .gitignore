@@ -1,0 +1,19 @@
+Build/*
+Temp/*
+Misc/*
+Downloads/*
+Test/*
+Time Zone/
+.vs
+Project.h
+Resource.rc
+Segment Analytics Cache.json
+*.ncb
+*.aps
+*.sdf
+*.suo
+*.vcproj.*
+*.vcxproj.user
+*.opensdf
+*.EXE
+*.orig
