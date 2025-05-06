@@ -1,6 +1,15 @@
 #include "NamecheapDynamicDNSAutoUpdater.h"
 
+#include "Project.h"
+
+#include <Network/HTTPService.h>
+#include <Network/IPAddressService.h>
+#include <Utilities/FileUtilities.h>
+#include <Utilities/StringUtilities.h>
+
 #include <spdlog/spdlog.h>
+
+static const std::string HTTP_USER_AGENT(Utilities::replaceAll(APPLICATION_NAME, " ", "") + "/" + APPLICATION_VERSION);
 
 NamecheapDynamicDNSAutoUpdater::NamecheapDynamicDNSAutoUpdater()
 	: Application()
@@ -20,6 +29,17 @@ bool NamecheapDynamicDNSAutoUpdater::initialize(int argc, char * argv[]) {
 
 bool NamecheapDynamicDNSAutoUpdater::initialize(std::shared_ptr<ArgumentParser> arguments) {
 	if(m_initialized) {
+		return false;
+	}
+
+	HTTPConfiguration configuration;
+	configuration.certificateAuthorityCertificateStoreDirectoryPath = Utilities::joinPaths("../Data", "cURL");
+
+	HTTPService * httpService = HTTPService::getInstance();
+	httpService->setUserAgent(HTTP_USER_AGENT);
+
+	if(!httpService->initialize(configuration)) {
+		spdlog::error("Failed to initialize HTTP service!");
 		return false;
 	}
 
