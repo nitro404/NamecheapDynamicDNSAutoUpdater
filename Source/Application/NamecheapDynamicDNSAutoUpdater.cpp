@@ -1,6 +1,7 @@
 #include "NamecheapDynamicDNSAutoUpdater.h"
 
 #include "Project.h"
+#include "SettingsManager.h"
 
 #include <Network/HTTPService.h>
 #include <Network/IPAddressService.h>
@@ -13,7 +14,13 @@ static const std::string HTTP_USER_AGENT(Utilities::replaceAll(APPLICATION_NAME,
 
 NamecheapDynamicDNSAutoUpdater::NamecheapDynamicDNSAutoUpdater()
 	: Application()
-	, m_initialized(false) { }
+	, m_initialized(false) {
+	FactoryRegistry & factoryRegistry = FactoryRegistry::getInstance();
+
+	factoryRegistry.setFactory<SettingsManager>([]() {
+		return std::make_unique<SettingsManager>();
+	});
+}
 
 NamecheapDynamicDNSAutoUpdater::~NamecheapDynamicDNSAutoUpdater() { }
 
@@ -34,6 +41,15 @@ bool NamecheapDynamicDNSAutoUpdater::initialize(std::shared_ptr<ArgumentParser> 
 
 	HTTPConfiguration configuration;
 	configuration.certificateAuthorityCertificateStoreDirectoryPath = Utilities::joinPaths("../Data", "cURL");
+	if(arguments != nullptr) {
+		m_arguments = arguments;
+	}
+
+	SettingsManager * settings = SettingsManager::getInstance();
+
+	if(!settings->isLoaded()) {
+		settings->load(m_arguments.get());
+	}
 
 	HTTPService * httpService = HTTPService::getInstance();
 	httpService->setUserAgent(HTTP_USER_AGENT);
@@ -51,6 +67,14 @@ bool NamecheapDynamicDNSAutoUpdater::initialize(std::shared_ptr<ArgumentParser> 
 void NamecheapDynamicDNSAutoUpdater::uninitialize() {
 	if(!m_initialized) {
 		return;
+	}
+
+	SettingsManager * settings = SettingsManager::getInstance();
+
+	settings->save(m_arguments.get());
+
+	if(m_arguments != nullptr) {
+		m_arguments.reset();
 	}
 
 	m_initialized = false;

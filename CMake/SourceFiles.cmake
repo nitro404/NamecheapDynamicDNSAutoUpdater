@@ -3,6 +3,8 @@ include_guard()
 set(MAIN_SOURCE_FILES
 	Application/NamecheapDynamicDNSAutoUpdater.h
 	Application/NamecheapDynamicDNSAutoUpdater.cpp
+	Application/SettingsManager.h
+	Application/SettingsManager.cpp
 	Namecheap/NamecheapDomainProfile.h
 	Namecheap/NamecheapDomainProfile.cpp
 	Main.cpp
