@@ -19,6 +19,7 @@ public:
 
 private:
 	std::atomic<bool> m_initialized;
+	std::shared_ptr<ArgumentParser> m_arguments;
 
 	NamecheapDynamicDNSAutoUpdater(const NamecheapDynamicDNSAutoUpdater &) = delete;
 	const NamecheapDynamicDNSAutoUpdater & operator = (const NamecheapDynamicDNSAutoUpdater &) = delete;

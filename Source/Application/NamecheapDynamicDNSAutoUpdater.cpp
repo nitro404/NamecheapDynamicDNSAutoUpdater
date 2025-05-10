@@ -4,7 +4,7 @@
 #include "SettingsManager.h"
 
 #include <Network/HTTPService.h>
-#include <Network/IPAddressService.h>
+#include <Platform/TimeZoneDataManager.h>
 #include <Utilities/FileUtilities.h>
 #include <Utilities/StringUtilities.h>
 
@@ -39,8 +39,6 @@ bool NamecheapDynamicDNSAutoUpdater::initialize(std::shared_ptr<ArgumentParser> 
 		return false;
 	}
 
-	HTTPConfiguration configuration;
-	configuration.certificateAuthorityCertificateStoreDirectoryPath = Utilities::joinPaths("../Data", "cURL");
 	if(arguments != nullptr) {
 		m_arguments = arguments;
 	}
@@ -51,12 +49,41 @@ bool NamecheapDynamicDNSAutoUpdater::initialize(std::shared_ptr<ArgumentParser> 
 		settings->load(m_arguments.get());
 	}
 
+	HTTPConfiguration configuration = {
+		Utilities::joinPaths(settings->dataDirectoryPath, settings->curlDataDirectoryName),
+		"",
+		settings->connectionTimeout,
+		settings->networkTimeout,
+		settings->transferTimeout
+	};
+
 	HTTPService * httpService = HTTPService::getInstance();
 	httpService->setUserAgent(HTTP_USER_AGENT);
+	httpService->setVerboseLoggingEnabled(settings->verboseRequestLogging);
 
 	if(!httpService->initialize(configuration)) {
 		spdlog::error("Failed to initialize HTTP service!");
 		return false;
+	}
+
+	if(!settings->downloadThrottlingEnabled || !settings->cacertLastDownloadedTimestamp.has_value() || std::chrono::system_clock::now() - settings->cacertLastDownloadedTimestamp.value() > settings->cacertUpdateFrequency) {
+		if(httpService->updateCertificateAuthorityCertificateAndWait()) {
+			settings->cacertLastDownloadedTimestamp = std::chrono::system_clock::now();
+			settings->save();
+		}
+	}
+
+	bool timeZoneDataUpdated = false;
+	bool shouldUpdateTimeZoneData = !settings->downloadThrottlingEnabled || !settings->timeZoneDataLastDownloadedTimestamp.has_value() || std::chrono::system_clock::now() - settings->timeZoneDataLastDownloadedTimestamp.value() > settings->timeZoneDataUpdateFrequency;
+
+	if(!TimeZoneDataManager::getInstance()->initialize(Utilities::joinPaths(settings->dataDirectoryPath, settings->timeZoneDataDirectoryName), settings->fileETags, shouldUpdateTimeZoneData, false, &timeZoneDataUpdated)) {
+		spdlog::error("Failed to initialize time zone data manager!");
+		return false;
+	}
+
+	if(timeZoneDataUpdated) {
+		settings->timeZoneDataLastDownloadedTimestamp = std::chrono::system_clock::now();
+		settings->save();
 	}
 
 	m_initialized = true;
