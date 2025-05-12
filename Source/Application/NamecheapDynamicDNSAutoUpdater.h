@@ -14,11 +14,16 @@ public:
 	NamecheapDynamicDNSAutoUpdater();
 	virtual ~NamecheapDynamicDNSAutoUpdater();
 
+	bool isInitialized() const;
 	bool initialize(int argc = 0, char * argv[] = nullptr);
 	bool initialize(std::shared_ptr<ArgumentParser> arguments);
 	void uninitialize();
 	bool run();
 
+	static std::string getArgumentHelpInformation();
+	static void displayArgumentHelp();
+	static void displayVersion();
+	static void displayLibraryInformation();
 private:
 	std::atomic<bool> m_initialized;
 	std::shared_ptr<ArgumentParser> m_arguments;

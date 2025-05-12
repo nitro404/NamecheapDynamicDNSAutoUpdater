@@ -3,6 +3,7 @@
 #include "Project.h"
 #include "SettingsManager.h"
 
+#include <LibraryInformation.h>
 #include <Network/HTTPService.h>
 #include <Platform/TimeZoneDataManager.h>
 #include <Utilities/FileUtilities.h>
@@ -35,13 +36,32 @@ bool NamecheapDynamicDNSAutoUpdater::initialize(int argc, char * argv[]) {
 	return initialize(arguments);
 }
 
+bool NamecheapDynamicDNSAutoUpdater::isInitialized() const {
+	return m_initialized;
+}
+
 bool NamecheapDynamicDNSAutoUpdater::initialize(std::shared_ptr<ArgumentParser> arguments) {
 	if(m_initialized) {
-		return false;
+		return true;
 	}
 
 	if(arguments != nullptr) {
 		m_arguments = arguments;
+
+		if(m_arguments->hasArgument("?", "help")) {
+			displayArgumentHelp();
+			return false;
+		}
+
+		if(m_arguments->hasArgument("version")) {
+			displayVersion();
+			return false;
+		}
+
+		if(m_arguments->hasArgument("info")) {
+			displayLibraryInformation();
+			return false;
+		}
 	}
 
 	SettingsManager * settings = SettingsManager::getInstance();
@@ -120,4 +140,29 @@ bool NamecheapDynamicDNSAutoUpdater::run() {
 	}
 
 	return true;
+}
+
+std::string NamecheapDynamicDNSAutoUpdater::getArgumentHelpInformation() {
+	std::ostringstream argumentHelpStream;
+
+	argumentHelpStream << APPLICATION_NAME << " version " << APPLICATION_VERSION << " arguments:\n";
+	argumentHelpStream << " --file \"Settings.json\" - specifies an alternate settings file to use.\n";
+	argumentHelpStream << " -f \"File.json\" - alias for 'file'.\n";
+	argumentHelpStream << " --info - displays dependency library version information.\n";
+	argumentHelpStream << " --help - displays this help message.\n";
+	argumentHelpStream << " -? - alias for 'help'.\n";
+
+	return argumentHelpStream.str();
+}
+
+void NamecheapDynamicDNSAutoUpdater::displayArgumentHelp() {
+	printf("%s\n", getArgumentHelpInformation().data());
+}
+
+void NamecheapDynamicDNSAutoUpdater::displayVersion() {
+	printf("%s\n", APPLICATION_VERSION.data());
+}
+
+void NamecheapDynamicDNSAutoUpdater::displayLibraryInformation() {
+	printf("%s\n", LibraryInformation::getInstance()->getLibraryInformationString().data());
 }
