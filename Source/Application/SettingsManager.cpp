@@ -50,6 +50,10 @@ static constexpr const char * CACERT_UPDATE_FREQUENCY_PROPERTY_NAME = "cacertUpd
 static constexpr const char * TIME_ZONE_DATA_LAST_DOWNLOADED_PROPERTY_NAME = "timeZoneDataLastDownloaded";
 static constexpr const char * TIME_ZONE_DATA_UPDATE_FREQUENCY_PROPERTY_NAME = "timeZoneDataUpdateFrequency";
 
+static constexpr const char * DOMAIN_PROFILES_PROPERTY_NAME = "domainProfiles";
+static constexpr const char * DOMAIN_PROFILES_IP_ADDRESS_UPDATE_FREQUENCY_PROPERTY_NAME = "ipAddressUpdateFrequency";
+static constexpr const char * DOMAIN_PROFILES_FILE_PATHS_PROPERTY_NAME = "filePaths";
+
 const std::string SettingsManager::FILE_TYPE("Namecheap Dynamic DNS Auto-Updater Settings");
 const uint32_t SettingsManager::FILE_FORMAT_VERSION = 1;
 const std::string SettingsManager::DEFAULT_SETTINGS_FILE_PATH("Namecheap Dynamic DNS Auto-Updater Settings.json");
@@ -64,6 +68,7 @@ const bool SettingsManager::DEFAULT_VERBOSE_REQUEST_LOGGING = false;
 const bool SettingsManager::DEFAULT_DOWNLOAD_THROTTLING_ENABLED = true;
 const std::chrono::minutes SettingsManager::DEFAULT_CACERT_UPDATE_FREQUENCY = std::chrono::hours(2 * 24 * 7); // 2 weeks
 const std::chrono::minutes SettingsManager::DEFAULT_TIME_ZONE_DATA_UPDATE_FREQUENCY = std::chrono::hours(1 * 24 * 7); // 1 week
+const std::chrono::minutes SettingsManager::DEFAULT_IP_ADDRESS_UPDATE_FREQUENCY = std::chrono::minutes(30);
 
 static bool assignStringSetting(std::string & setting, const rapidjson::Value & categoryValue, const std::string & propertyName) {
 	if(propertyName.empty() || !categoryValue.IsObject() || !categoryValue.HasMember(propertyName.c_str())) {
@@ -130,6 +135,30 @@ static bool assignChronoSetting(T & setting, const rapidjson::Value & categoryVa
 	return true;
 }
 
+static bool assignStringArraySetting(std::vector<std::string> & setting, const rapidjson::Value & categoryValue, const std::string & propertyName) {
+	if(propertyName.empty() || !categoryValue.IsObject() || !categoryValue.HasMember(propertyName.c_str())) {
+		return false;
+	}
+
+	const rapidjson::Value & settingValue = categoryValue[propertyName.c_str()];
+
+	if(!settingValue.IsArray()) {
+		return false;
+	}
+
+	for(rapidjson::Value::ConstValueIterator i = settingValue.Begin(); i != settingValue.End(); ++i) {
+		if(!i->IsString()) {
+			return false;
+		}
+	}
+
+	for(rapidjson::Value::ConstValueIterator i = settingValue.Begin(); i != settingValue.End(); ++i) {
+		setting.emplace_back(i->GetString());
+	}
+
+	return true;
+}
+
 SettingsManager::SettingsManager()
 	: downloadsDirectoryPath(DEFAULT_DOWNLOADS_DIRECTORY_PATH)
 	, dataDirectoryPath(DEFAULT_DATA_DIRECTORY_PATH)
@@ -142,6 +171,7 @@ SettingsManager::SettingsManager()
 	, downloadThrottlingEnabled(DEFAULT_DOWNLOAD_THROTTLING_ENABLED)
 	, cacertUpdateFrequency(DEFAULT_CACERT_UPDATE_FREQUENCY)
 	, timeZoneDataUpdateFrequency(DEFAULT_TIME_ZONE_DATA_UPDATE_FREQUENCY)
+	, ipAddressUpdateFrequency(DEFAULT_IP_ADDRESS_UPDATE_FREQUENCY)
 	, m_loaded(false)
 	, m_filePath(DEFAULT_SETTINGS_FILE_PATH) { }
 
@@ -161,6 +191,8 @@ void SettingsManager::reset() {
 	cacertUpdateFrequency = DEFAULT_CACERT_UPDATE_FREQUENCY;
 	timeZoneDataLastDownloadedTimestamp.reset();
 	timeZoneDataUpdateFrequency = DEFAULT_TIME_ZONE_DATA_UPDATE_FREQUENCY;
+	ipAddressUpdateFrequency = DEFAULT_IP_ADDRESS_UPDATE_FREQUENCY;
+	domainProfileFilePaths.clear();
 	fileETags.clear();
 }
 
@@ -220,6 +252,21 @@ rapidjson::Document SettingsManager::toJSON() const {
 	downloadThrottlingCategoryValue.AddMember(rapidjson::StringRef(TIME_ZONE_DATA_UPDATE_FREQUENCY_PROPERTY_NAME), rapidjson::Value(timeZoneDataUpdateFrequency.count()), allocator);
 
 	settingsDocument.AddMember(rapidjson::StringRef(DOWNLOAD_THROTTLING_CATEGORY_NAME), downloadThrottlingCategoryValue, allocator);
+
+	rapidjson::Value domainProfilesValue(rapidjson::kObjectType);
+
+	domainProfilesValue.AddMember(rapidjson::StringRef(DOMAIN_PROFILES_IP_ADDRESS_UPDATE_FREQUENCY_PROPERTY_NAME), rapidjson::Value(ipAddressUpdateFrequency.count()), allocator);
+
+	rapidjson::Value domainProfilesFilePathsValue(rapidjson::kArrayType);
+
+	for(const std::string & domainProfileFilePath : domainProfileFilePaths) {
+		rapidjson::Value domainProfileFilePathValue(domainProfileFilePath.data(), allocator);
+		domainProfilesFilePathsValue.PushBack(domainProfileFilePathValue, allocator);
+	}
+
+	domainProfilesValue.AddMember(rapidjson::StringRef(DOMAIN_PROFILES_FILE_PATHS_PROPERTY_NAME), domainProfilesFilePathsValue, allocator);
+
+	settingsDocument.AddMember(rapidjson::StringRef(DOMAIN_PROFILES_PROPERTY_NAME), domainProfilesValue, allocator);
 
 	rapidjson::Value fileETagsValue(rapidjson::kObjectType);
 
@@ -326,6 +373,13 @@ bool SettingsManager::parseFrom(const rapidjson::Value & settingsDocument) {
 		assignChronoSetting(cacertUpdateFrequency, downloadThrottlingValue, CACERT_UPDATE_FREQUENCY_PROPERTY_NAME);
 		assignOptionalTimePointSetting(timeZoneDataLastDownloadedTimestamp, downloadThrottlingValue, TIME_ZONE_DATA_LAST_DOWNLOADED_PROPERTY_NAME);
 		assignChronoSetting(timeZoneDataUpdateFrequency, downloadThrottlingValue, TIME_ZONE_DATA_UPDATE_FREQUENCY_PROPERTY_NAME);
+	}
+
+	if(settingsDocument.HasMember(DOMAIN_PROFILES_PROPERTY_NAME) && settingsDocument[DOMAIN_PROFILES_PROPERTY_NAME].IsObject()) {
+		const rapidjson::Value & domainProfilesValue = settingsDocument[DOMAIN_PROFILES_PROPERTY_NAME];
+
+		assignChronoSetting(ipAddressUpdateFrequency, domainProfilesValue, DOMAIN_PROFILES_IP_ADDRESS_UPDATE_FREQUENCY_PROPERTY_NAME);
+		assignStringArraySetting(domainProfileFilePaths, domainProfilesValue, DOMAIN_PROFILES_FILE_PATHS_PROPERTY_NAME);
 	}
 
 	if(settingsDocument.HasMember(FILE_ETAGS_PROPERTY_NAME) && settingsDocument[FILE_ETAGS_PROPERTY_NAME].IsObject()) {

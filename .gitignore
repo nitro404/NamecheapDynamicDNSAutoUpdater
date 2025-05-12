@@ -8,6 +8,7 @@ Time Zone/
 Project.h
 Resource.rc
 Segment Analytics Cache.json
+* Profile.json
 *.ncb
 *.aps
 *.sdf

@@ -7,6 +7,12 @@ set(MAIN_SOURCE_FILES
 	Application/SettingsManager.cpp
 	Namecheap/NamecheapDomainProfile.h
 	Namecheap/NamecheapDomainProfile.cpp
+	Namecheap/NamecheapDomainProfileCollection.h
+	Namecheap/NamecheapDomainProfileCollection.cpp
+	Namecheap/NamecheapDomainProfileManager.h
+	Namecheap/NamecheapDomainProfileManager.cpp
+	Namecheap/NamecheapDynamicDNSService.h
+	Namecheap/NamecheapDynamicDNSService.cpp
 	Main.cpp
 	Project.h
 )

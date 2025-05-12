@@ -14,7 +14,8 @@ static const std::string HTTP_USER_AGENT(Utilities::replaceAll(APPLICATION_NAME,
 
 NamecheapDynamicDNSAutoUpdater::NamecheapDynamicDNSAutoUpdater()
 	: Application()
-	, m_initialized(false) {
+	, m_initialized(false)
+	, m_domainProfileManager(std::make_shared<NamecheapDomainProfileManager>()) {
 	FactoryRegistry & factoryRegistry = FactoryRegistry::getInstance();
 
 	factoryRegistry.setFactory<SettingsManager>([]() {
@@ -84,6 +85,11 @@ bool NamecheapDynamicDNSAutoUpdater::initialize(std::shared_ptr<ArgumentParser> 
 	if(timeZoneDataUpdated) {
 		settings->timeZoneDataLastDownloadedTimestamp = std::chrono::system_clock::now();
 		settings->save();
+	}
+
+	if(!m_domainProfileManager->initialize(arguments.get())) {
+		spdlog::error("Failed to initialize domain profile manager!");
+		return false;
 	}
 
 	m_initialized = true;

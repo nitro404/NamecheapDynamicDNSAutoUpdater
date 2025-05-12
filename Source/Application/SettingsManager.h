@@ -41,6 +41,7 @@ public:
 	static const bool DEFAULT_DOWNLOAD_THROTTLING_ENABLED;
 	static const std::chrono::minutes DEFAULT_CACERT_UPDATE_FREQUENCY;
 	static const std::chrono::minutes DEFAULT_TIME_ZONE_DATA_UPDATE_FREQUENCY;
+	static const std::chrono::minutes DEFAULT_IP_ADDRESS_UPDATE_FREQUENCY;
 
 	std::string downloadsDirectoryPath;
 	std::string dataDirectoryPath;
@@ -55,7 +56,9 @@ public:
 	std::chrono::minutes cacertUpdateFrequency;
 	std::optional<std::chrono::time_point<std::chrono::system_clock>> timeZoneDataLastDownloadedTimestamp;
 	std::chrono::minutes timeZoneDataUpdateFrequency;
+	std::chrono::minutes ipAddressUpdateFrequency;
 
+	std::vector<std::string> domainProfileFilePaths;
 	std::map<std::string, std::string> fileETags;
 
 private:

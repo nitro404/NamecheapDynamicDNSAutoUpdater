@@ -1,6 +1,8 @@
 #ifndef _NAMECHEAP_DYNAMIC_DNS_AUTO_UPDATER_H_
 #define _NAMECHEAP_DYNAMIC_DNS_AUTO_UPDATER_H_
 
+#include "Namecheap/NamecheapDomainProfileManager.h"
+
 #include <Application/Application.h>
 #include <Arguments/ArgumentParser.h>
 
@@ -20,6 +22,7 @@ public:
 private:
 	std::atomic<bool> m_initialized;
 	std::shared_ptr<ArgumentParser> m_arguments;
+	std::shared_ptr<NamecheapDomainProfileManager> m_domainProfileManager;
 
 	NamecheapDynamicDNSAutoUpdater(const NamecheapDynamicDNSAutoUpdater &) = delete;
 	const NamecheapDynamicDNSAutoUpdater & operator = (const NamecheapDynamicDNSAutoUpdater &) = delete;
